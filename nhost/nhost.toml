@@ -19,8 +19,6 @@ enableAllowList = false
 enableConsole = true
 enableRemoteSchemaPermissions = false
 enabledAPIs = ["metadata", "graphql", "pgdump", "config"]
-liveQueriesMultiplexedRefetch = 1000
-stringifyNumericTypes = false
 
 [functions]
 [functions.node]
