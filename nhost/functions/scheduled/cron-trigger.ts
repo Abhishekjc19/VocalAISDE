@@ -4,10 +4,66 @@ import { Request, Response } from 'express';
 // Scheduled Cron Trigger
 // Runs on a schedule, finds all active scheduled triggers,
 // and starts workflow runs for each.
+// Uses cron-parser to evaluate schedules against current time.
 // ============================================================
 
 const HASURA_ENDPOINT = process.env.NHOST_HASURA_URL || 'http://localhost:1337/v1/graphql';
 const HASURA_ADMIN_SECRET = process.env.NHOST_ADMIN_SECRET || 'nhost-admin-secret';
+
+// Simple cron expression parser
+// Format: minute hour day month day-of-week
+// Supports: * (any), numbers, ranges (1-5), steps (*/5)
+function parseCronExpression(cron: string): (date: Date) => boolean {
+  const parts = cron.split(/\s+/);
+  if (parts.length !== 5) return () => true; // Invalid format, always trigger
+  
+  const [minStr, hourStr, dayStr, monthStr, dowStr] = parts;
+  
+  function parseField(field: string, min: number, max: number): Set<number> {
+    const values = new Set<number>();
+    
+    if (field === '*') {
+      for (let i = min; i <= max; i++) values.add(i);
+      return values;
+    }
+    
+    // Handle step values like */5
+    if (field.startsWith('*/')) {
+      const step = parseInt(field.slice(2));
+      for (let i = min; i <= max; i += step) values.add(i);
+      return values;
+    }
+    
+    // Handle ranges like 1-5
+    const rangeParts = field.split('-');
+    if (rangeParts.length === 2) {
+      const rangeMin = parseInt(rangeParts[0]);
+      const rangeMax = parseInt(rangeParts[1]);
+      for (let i = rangeMin; i <= rangeMax; i++) values.add(i);
+      return values;
+    }
+    
+    // Single number
+    const num = parseInt(field);
+    if (!isNaN(num)) values.add(num);
+    
+    return values;
+  }
+  
+  const minutes = parseField(minStr, 0, 59);
+  const hours = parseField(hourStr, 0, 23);
+  const days = parseField(dayStr, 1, 31);
+  const months = parseField(monthStr, 1, 12);
+  const dows = parseField(dowStr, 0, 6);
+  
+  return (date: Date) => {
+    return minutes.has(date.getUTCMinutes()) &&
+           hours.has(date.getUTCHours()) &&
+           days.has(date.getUTCDate()) &&
+           months.has(date.getUTCMonth() + 1) &&
+           dows.has(date.getUTCDay());
+  };
+}
 
 async function hasuraQuery(query: string, variables: Record<string, any> = {}) {
   const res = await fetch(HASURA_ENDPOINT, {
@@ -57,9 +113,15 @@ export default async function handler(req: Request, res: Response) {
         continue;
       }
 
-      // Check if cron schedule matches current time (simplified check)
+      // Check if cron schedule matches current time
       const cronConfig = trigger.config?.cron || '*/5 * * * *'; // Default: every 5 minutes
-      // In production, use a proper cron parser. For now, always trigger.
+      const matcher = parseCronExpression(cronConfig);
+      const now = new Date();
+      
+      if (!matcher(now)) {
+        results.push({ workflow_id: workflow.id, status: 'skipped', reason: 'Not scheduled for this time' });
+        continue;
+      }
       
       // Create a workflow run
       const createRun = await hasuraQuery(

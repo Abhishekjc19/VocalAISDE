@@ -1,0 +1,15 @@
+- name: watched_table_insert_trigger
+  table:
+    schema: public
+    name: watched_tables
+  webhook: '{{NHOST_FUNCTIONS_URL}}/webhooks/trigger'
+  insert:
+    columns: '*'
+  headers:
+    - name: x-webhook-secret
+      value_from_env: WEBHOOK_SECRET
+  retry_conf:
+    num_retries: 3
+    interval_sec: 10
+    timeout_sec: 60
+  trigger_on_replication: false
