@@ -47,7 +47,7 @@ export function useApp() {
 
 // Simple GraphQL client that works with nhost auth
 async function gqlRequest(query: string, variables: Record<string, any> = {}, token?: string | null) {
-  const graphqlUrl = process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL || 'http://localhost:1337/v1/graphql';
+  const graphqlUrl = 'https://wswbfudwrzygkeyjsofk.graphql.ap-south-1.nhost.run/v1';
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
