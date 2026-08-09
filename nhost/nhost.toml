@@ -1,9 +1,0 @@
-[global]
-
-[[global.environment]]
-name = "GROQ_API_KEY"
-value = ""
-
-[[global.environment]]
-name = "WEBHOOK_SECRET"
-value = "agent-flow-webhook-secret-2024"
