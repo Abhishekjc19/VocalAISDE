@@ -45,6 +45,14 @@ export function useApp() {
   return useContext(AppContext);
 }
 
+function mapNhostUser(nhostUser: any): User {
+  return {
+    id: nhostUser.id,
+    email: nhostUser.email || '',
+    displayName: nhostUser.displayName || nhostUser.email?.split('@')[0] || 'User',
+  };
+}
+
 // Simple GraphQL client that works with nhost auth
 async function gqlRequest(query: string, variables: Record<string, any> = {}, token?: string | null) {
   const graphqlUrl =
@@ -80,18 +88,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Check for saved session
   useEffect(() => {
-    const savedUser = localStorage.getItem('agentflow_user');
-    const savedOrg = localStorage.getItem('agentflow_current_org');
-    
-    if (savedUser) {
+    const restoreSession = async () => {
       try {
-        const parsed = JSON.parse(savedUser);
-        setUser(parsed);
-      } catch {}
-    }
-    
-    setLoading(false);
+        await nhost.auth.isAuthenticatedAsync();
+        const session = nhost.auth.getSession();
+        if (session?.user) {
+          const userData = mapNhostUser(session.user);
+          setUser(userData);
+          localStorage.setItem('agentflow_user', JSON.stringify(userData));
+        } else {
+          localStorage.removeItem('agentflow_user');
+        }
+      } catch (error) {
+        console.error('Failed to restore auth session:', error);
+        localStorage.removeItem('agentflow_user');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    restoreSession();
+
+    const unsubscribe = nhost.auth.onAuthStateChanged((_event, session) => {
+      if (session?.user) {
+        const userData = mapNhostUser(session.user);
+        setUser(userData);
+        localStorage.setItem('agentflow_user', JSON.stringify(userData));
+      } else {
+        setUser(null);
+        setOrgs([]);
+        setCurrentOrgState(null);
+        localStorage.removeItem('agentflow_user');
+        localStorage.removeItem('agentflow_current_org');
+      }
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      const savedUser = localStorage.getItem('agentflow_user');
+      if (savedUser) {
+        localStorage.removeItem('agentflow_user');
+      }
+    }
+  }, [loading, user]);
 
   // Load orgs when user changes
   useEffect(() => {
@@ -157,15 +201,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const result = await nhost.auth.signIn({ email, password });
       if (result.error) {
+        if (result.error.message === 'User is already signed in') {
+          const session = nhost.auth.getSession();
+          if (session?.user) {
+            const userData = mapNhostUser(session.user);
+            setUser(userData);
+            localStorage.setItem('agentflow_user', JSON.stringify(userData));
+            return {};
+          }
+        }
         return { error: result.error.message };
       }
       const nhostUser = result.session?.user;
       if (nhostUser) {
-        const userData: User = {
-          id: nhostUser.id,
-          email: nhostUser.email || '',
-          displayName: nhostUser.displayName || email.split('@')[0],
-        };
+        const userData = mapNhostUser(nhostUser);
         setUser(userData);
         localStorage.setItem('agentflow_user', JSON.stringify(userData));
       }
@@ -188,11 +237,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       const nhostUser = result.session?.user;
       if (nhostUser) {
-        const userData: User = {
-          id: nhostUser.id,
-          email: nhostUser.email || '',
-          displayName: nhostUser.displayName || displayName,
-        };
+        const userData = mapNhostUser({ ...nhostUser, displayName: nhostUser.displayName || displayName });
         setUser(userData);
         localStorage.setItem('agentflow_user', JSON.stringify(userData));
       }
