@@ -67,17 +67,30 @@ async function gqlRequest(query: string, variables: Record<string, any> = {}, to
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(graphqlUrl, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ query, variables }),
-  });
+  try {
+    const res = await fetch(graphqlUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ query, variables }),
+    });
 
-  const json = await res.json();
-  if (json.errors) {
-    throw new Error(json.errors[0].message);
+    if (!res.ok) {
+      console.error(`GraphQL request failed with status ${res.status}`);
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+
+    const json = await res.json();
+    
+    if (json.errors) {
+      console.error('GraphQL errors:', json.errors);
+      throw new Error(json.errors[0].message);
+    }
+    
+    return json.data;
+  } catch (error: any) {
+    console.error('GraphQL request error:', error);
+    throw error;
   }
-  return json.data;
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {

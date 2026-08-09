@@ -26,6 +26,7 @@ export default function WorkflowsPage() {
   const router = useRouter();
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -36,8 +37,14 @@ export default function WorkflowsPage() {
   }, [user, loading, router]);
 
   const loadWorkflows = useCallback(async () => {
-    if (!currentOrg) return;
+    if (!currentOrg) {
+      setWorkflows([]);
+      setLoadingData(false);
+      setLoadError(null);
+      return;
+    }
     setLoadingData(true);
+    setLoadError(null);
     try {
       const data = await graphqlRequest(
         `query GetOrgWorkflows($org_id: uuid!) {
@@ -69,8 +76,10 @@ export default function WorkflowsPage() {
         { org_id: currentOrg.organization.id }
       );
       setWorkflows(data.workflows || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load workflows:', error);
+      setWorkflows([]);
+      setLoadError(error?.message || 'Failed to load workflows. Please try again.');
     } finally {
       setLoadingData(false);
     }
@@ -127,7 +136,11 @@ export default function WorkflowsPage() {
         <div className="page-header">
           <div>
             <h2>Workflows</h2>
-            <p className="subtitle">{workflows.length} workflow{workflows.length !== 1 ? 's' : ''} in {currentOrg?.organization.name}</p>
+            <p className="subtitle">
+              {currentOrg
+                ? `${workflows.length} workflow${workflows.length !== 1 ? 's' : ''} in ${currentOrg.organization.name}`
+                : 'No organization selected'}
+            </p>
           </div>
           {canEdit && (
             <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
@@ -136,7 +149,25 @@ export default function WorkflowsPage() {
           )}
         </div>
 
-        {loadingData ? (
+        {!currentOrg ? (
+          <div className="empty-state">
+            <div className="empty-icon">⚡</div>
+            <h3>No Organization Selected</h3>
+            <p>Create an organization before adding workflows.</p>
+            <button className="btn btn-primary" onClick={() => router.push('/dashboard')}>
+              Go to Dashboard
+            </button>
+          </div>
+        ) : loadError ? (
+          <div className="empty-state">
+            <div className="empty-icon">❌</div>
+            <h3>Error Loading Workflows</h3>
+            <p>{loadError}</p>
+            <button className="btn btn-primary" onClick={() => loadWorkflows()}>
+              Try Again
+            </button>
+          </div>
+        ) : loadingData ? (
           <div className="loading-page" style={{ minHeight: '40vh' }}>
             <div className="loading-spinner" style={{ width: 32, height: 32 }}></div>
             <div className="loading-text">Loading workflows...</div>
