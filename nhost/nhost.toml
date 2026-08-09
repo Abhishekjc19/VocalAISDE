@@ -1,7 +1,12 @@
 [global]
-[global.environment]
-GROQ_API_KEY = ""
-WEBHOOK_SECRET = "agent-flow-webhook-secret-2024"
+
+[[global.environment]]
+name = "GROQ_API_KEY"
+value = ""
+
+[[global.environment]]
+name = "WEBHOOK_SECRET"
+value = "agent-flow-webhook-secret-2024"
 
 [hasura]
 version = "v2.38.0-ce"
