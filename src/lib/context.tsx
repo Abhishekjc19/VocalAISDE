@@ -47,7 +47,9 @@ export function useApp() {
 
 // Simple GraphQL client that works with nhost auth
 async function gqlRequest(query: string, variables: Record<string, any> = {}, token?: string | null) {
-  const graphqlUrl = 'https://wswbfudwrzygkeyjsofk.graphql.ap-south-1.nhost.run/v1';
+  const graphqlUrl =
+    process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL ||
+    'https://wswbfudwrzygkeyjsofk.graphql.ap-south-1.nhost.run/v1';
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -170,7 +172,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return {};
     } catch (e: any) {
       console.error('SignIn error:', e);
-      return { error: 'Failed to connect to authentication server. Please verify your internet connection and Vercel environment variables.' };
+      return { error: e?.message || 'Failed to connect to authentication server.' };
     }
   };
 
@@ -197,7 +199,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return {};
     } catch (e: any) {
       console.error('SignUp error:', e);
-      return { error: 'Failed to connect to authentication server. Please verify your internet connection and Vercel environment variables.' };
+      return { error: e?.message || 'Failed to connect to authentication server.' };
     }
   };
 
