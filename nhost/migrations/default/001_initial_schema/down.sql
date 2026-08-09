@@ -1,0 +1,10 @@
+DROP VIEW IF EXISTS public.org_monthly_usage;
+DROP TABLE IF EXISTS public.watched_tables;
+DROP TABLE IF EXISTS public.step_runs;
+DROP TABLE IF EXISTS public.workflow_runs;
+DROP TABLE IF EXISTS public.workflow_triggers;
+DROP TABLE IF EXISTS public.workflow_steps;
+DROP TABLE IF EXISTS public.workflows;
+DROP TABLE IF EXISTS public.org_members;
+DROP TABLE IF EXISTS public.organizations;
+DROP FUNCTION IF EXISTS public.set_updated_at();

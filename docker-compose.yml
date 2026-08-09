@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agentflow
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./nhost/migrations/default/001_initial_schema/up.sql:/docker-entrypoint-initdb.d/01-schema.sql
+
+  hasura:
+    image: hasura/graphql-engine:v2.38.0
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    depends_on:
+      - postgres
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:postgres@postgres:5432/agentflow
+      HASURA_GRAPHQL_ENABLE_CONSOLE: 'true'
+      HASURA_GRAPHQL_ADMIN_SECRET: nhost-admin-secret
+      HASURA_GRAPHQL_DEV_MODE: 'true'
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: anonymous
+      HASURA_GRAPHQL_CORS_DOMAIN: '*'
+      HASURA_GRAPHQL_ENABLE_ALLOWLIST: 'false'
+      HASURA_GRAPHQL_LIVE_QUERIES_MULTIPLEXED_REFETCH: '1000'
+      HASURA_GRAPHQL_JWT_SECRET: '{"type":"HS256","key":"0123456789012345678901234567890123456789012345678901234567891234"}'
+      NHOST_FUNCTIONS_URL: http://functions:3333
+
+  functions:
+    build:
+      context: .
+      dockerfile: Dockerfile.functions
+    restart: unless-stopped
+    ports:
+      - '3333:3333'
+    depends_on:
+      - hasura
+    environment:
+      NHOST_HASURA_URL: http://hasura:8080/v1/graphql
+      NHOST_ADMIN_SECRET: nhost-admin-secret
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      WEBHOOK_SECRET: agent-flow-webhook-secret-2024
+
+volumes:
+  pgdata:
