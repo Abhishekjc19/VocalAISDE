@@ -1,0 +1,48 @@
+actions:
+  - name: triggerWorkflowRun
+    definition:
+      kind: synchronous
+      handler: '{{NHOST_FUNCTIONS_URL}}/actions/trigger-run'
+      timeout: 120
+    permissions:
+      - role: user
+      - role: owner
+      - role: editor
+    comment: Triggers a workflow run with permission checks and quota enforcement
+  - name: approveStep
+    definition:
+      kind: synchronous
+      handler: '{{NHOST_FUNCTIONS_URL}}/actions/approve-step'
+      timeout: 60
+    permissions:
+      - role: user
+      - role: owner
+      - role: editor
+    comment: Approves a paused approval_gate step after role verification
+custom_types:
+  input_types:
+    - name: TriggerWorkflowRunInput
+      fields:
+        - name: workflow_id
+          type: uuid!
+    - name: ApproveStepInput
+      fields:
+        - name: step_run_id
+          type: uuid!
+  object_types:
+    - name: TriggerWorkflowRunOutput
+      fields:
+        - name: workflow_run_id
+          type: uuid!
+        - name: status
+          type: String!
+        - name: message
+          type: String!
+    - name: ApproveStepOutput
+      fields:
+        - name: success
+          type: Boolean!
+        - name: message
+          type: String!
+        - name: workflow_run_id
+          type: uuid
