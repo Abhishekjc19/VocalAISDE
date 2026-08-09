@@ -55,9 +55,6 @@ async function gqlRequest(query: string, variables: Record<string, any> = {}, to
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
-  } else {
-    // Use admin secret for local dev if no token
-    headers['x-hasura-admin-secret'] = process.env.NEXT_PUBLIC_HASURA_ADMIN_SECRET || 'nhost-admin-secret';
   }
 
   const res = await fetch(graphqlUrl, {
@@ -172,15 +169,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return {};
     } catch (e: any) {
-      // Fallback for local dev without nhost auth
-      const userData: User = {
-        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
-        email,
-        displayName: email.split('@')[0],
-      };
-      setUser(userData);
-      localStorage.setItem('agentflow_user', JSON.stringify(userData));
-      return {};
+      console.error('SignIn error:', e);
+      return { error: 'Failed to connect to authentication server. Please verify your internet connection and Vercel environment variables.' };
     }
   };
 
@@ -206,15 +196,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return {};
     } catch (e: any) {
-      // Fallback for local dev
-      const userData: User = {
-        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
-        email,
-        displayName,
-      };
-      setUser(userData);
-      localStorage.setItem('agentflow_user', JSON.stringify(userData));
-      return {};
+      console.error('SignUp error:', e);
+      return { error: 'Failed to connect to authentication server. Please verify your internet connection and Vercel environment variables.' };
     }
   };
 
