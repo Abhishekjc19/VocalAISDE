@@ -1,0 +1,42 @@
+[global]
+[global.environment]
+GROQ_API_KEY = ""
+WEBHOOK_SECRET = "agent-flow-webhook-secret-2024"
+
+[hasura]
+version = "v2.38.0-ce"
+adminSecret = "nhost-admin-secret"
+
+[hasura.settings]
+corsDomain = ["*"]
+devMode = true
+enableAllowList = false
+enableConsole = true
+enableRemoteSchemaPermissions = false
+enabledAPIs = ["metadata", "graphql", "pgdump", "config"]
+liveQueriesMultiplexedRefetch = 1000
+stringifyNumericTypes = false
+
+[functions]
+[functions.node]
+version = 18
+
+[auth]
+[auth.method.emailPassword]
+emailVerificationRequired = false
+hibpEnabled = false
+
+[auth.method.anonymous]
+enabled = false
+
+[auth.redirections]
+clientUrl = "http://localhost:3000"
+
+[auth.signUp]
+enabled = true
+
+[postgres]
+version = "14.6-20230705-1"
+
+[storage]
+version = "0.3.5"
